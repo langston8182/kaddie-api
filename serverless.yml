@@ -76,9 +76,10 @@ custom:
       clientId: 1idl8aqbcettt4cr716n26i9sk
   alexa:
     skillId: amzn1.ask.skill.b2d3be3e-bdad-4c84-a48c-29cd98562b99
-    # Client Cognito (avec secret) de la liaison de compte ; à renseigner pour le pool de prod.
+    # Client Cognito (avec secret) de la liaison de compte, par pool.
     clientId:
       dev: 7g68uasgan1j93kl2nf1uqvuk
+      prod: 37phlh1kn1geto8622jmnepi7p
     # Nova ne s'appelle que par un profil d'inférence (préfixe eu.), qui répartit entre régions européennes.
     bedrockModelId: eu.amazon.nova-lite-v1:0
     bedrockFoundationModel: amazon.nova-lite-v1:0
