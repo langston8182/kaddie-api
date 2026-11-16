@@ -56,6 +56,9 @@ Pages publiques HTML à la racine (hors `/v1`, sans authentification), pour l'é
 | GET | `/products?updatedSince=` | Produits personnels de l'utilisateur |
 | PUT | `/products/{id}` | Crée / met à jour un produit personnel `{ name, category }` (409 si équivalent existant) |
 | DELETE | `/products/{id}` | Supprime (409 s'il est dans une liste) |
+| GET | `/templates` | Modèles de listes de l'utilisateur (avec leurs produits) |
+| PUT | `/templates/{id}` | Crée ou remplace un modèle `{ name, items: [{ productId, name, quantity, unit, note }] }` (max 50 modèles, 200 produits) |
+| DELETE | `/templates/{id}` | Supprime un modèle |
 | DELETE | `/account` | Supprime toutes les données de l'utilisateur |
 
 Le dictionnaire de base (~1 000 produits) reste embarqué dans l'application ; l'API ne stocke que les produits créés par l'utilisateur.

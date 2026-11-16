@@ -166,6 +166,20 @@ functions:
     events:
       - httpApi: { path: /suppression-compte, method: get }
 
+  # --- Modèles de listes ---
+  getTemplates:
+    handler: src/handlers/templates/getAll.handler
+    events:
+      - httpApi: { path: /v1/templates, method: get }
+  upsertTemplate:
+    handler: src/handlers/templates/upsert.handler
+    events:
+      - httpApi: { path: '/v1/templates/{id}', method: put }
+  deleteTemplate:
+    handler: src/handlers/templates/remove.handler
+    events:
+      - httpApi: { path: '/v1/templates/{id}', method: delete }
+
   # --- Compte ---
   deleteAccount:
     handler: src/handlers/account/remove.handler

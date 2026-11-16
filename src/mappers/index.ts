@@ -1,5 +1,6 @@
 import { IProduct } from '../models/product.model';
 import { IShoppingItem } from '../models/shoppingItem.model';
+import { ITemplate } from '../models/template.model';
 import { IShoppingList } from '../models/shoppingList.model';
 
 export interface ListCounts {
@@ -41,5 +42,21 @@ export function productToDto(product: IProduct) {
     usageCount: product.usageCount,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
+  };
+}
+
+export function templateToDto(template: ITemplate) {
+  return {
+    id: template.id,
+    name: template.name,
+    items: template.items.map((i) => ({
+      productId: i.productId,
+      name: i.name,
+      quantity: i.quantity,
+      unit: i.unit,
+      note: i.note,
+    })),
+    createdAt: template.createdAt,
+    updatedAt: template.updatedAt,
   };
 }

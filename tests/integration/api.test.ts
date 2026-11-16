@@ -18,6 +18,9 @@ import { handler as removeItem } from '../../src/handlers/items/remove';
 import { handler as getProducts } from '../../src/handlers/products/getAll';
 import { handler as upsertProduct } from '../../src/handlers/products/upsert';
 import { handler as removeProduct } from '../../src/handlers/products/remove';
+import { handler as getTemplates } from '../../src/handlers/templates/getAll';
+import { handler as upsertTemplate } from '../../src/handlers/templates/upsert';
+import { handler as deleteTemplate } from '../../src/handlers/templates/remove';
 import { handler as deleteAccount } from '../../src/handlers/account/remove';
 import { buildEvent, clearAllCollections, startInMemoryDatabase, stopInMemoryDatabase } from '../helpers/setupTestDb';
 
@@ -275,5 +278,52 @@ describe('compte', () => {
     expect((await call(deleteAccount, { userId: 'user-1' })).status).toBe(204);
     expect((await call(getLists, { userId: 'user-1' })).body).toEqual([]);
     expect((await call(getLists, { userId: 'user-2' })).body).toHaveLength(1);
+  });
+});
+
+describe('modèles de listes', () => {
+  const item = (productId: string, name: string, extra: Record<string, unknown> = {}) => ({ productId, name, quantity: 2, unit: 'L', ...extra });
+  const put = (id: string, body: Record<string, unknown>, userId = 'user-1') =>
+    call(upsertTemplate, { pathParameters: { id }, body, userId });
+
+  it('crée, relit, remplace et supprime un modèle', async () => {
+    const id = randomUUID();
+    const created = await put(id, { name: ' Barbecue ', items: [item('p1', 'Saucisse'), item('p2', 'Lait', { note: 'bio' })] });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ id, name: 'Barbecue' });
+    expect(created.body.items).toHaveLength(2);
+    expect(created.body.items[1]).toMatchObject({ productId: 'p2', quantity: 2, unit: 'L', note: 'bio' });
+
+    const replaced = await put(id, { name: 'Barbecue été', items: [item('p3', 'Brochettes', { unit: 'PIECE', quantity: 6 })] });
+    expect(replaced.status).toBe(200);
+    const list = (await call(getTemplates)).body;
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ name: 'Barbecue été', items: [{ productId: 'p3', quantity: 6 }] });
+
+    expect((await call(deleteTemplate, { pathParameters: { id } })).status).toBe(204);
+    expect((await call(deleteTemplate, { pathParameters: { id } })).status).toBe(404);
+    expect((await call(getTemplates)).body).toEqual([]);
+  });
+
+  it('cloisonne par utilisateur et valide les entrées', async () => {
+    const id = randomUUID();
+    await put(id, { name: 'Privé', items: [] });
+    expect((await call(getTemplates, { userId: 'user-2' })).body).toEqual([]);
+    expect((await call(deleteTemplate, { pathParameters: { id }, userId: 'user-2' })).status).toBe(404);
+
+    expect((await put(randomUUID(), { name: '  ', items: [] })).status).toBe(400);
+    expect((await put(randomUUID(), { name: 'x' })).status).toBe(400);
+    const bad = await put(randomUUID(), { name: 'x', items: [item('p1', 'A', { quantity: 0 }), item('p1', 'B'), item('p2', 'C', { unit: 'TONNE' })] });
+    expect(bad.status).toBe(400);
+    expect(Object.keys(bad.body.details)).toEqual(expect.arrayContaining(['items[0].quantity', 'items[1].productId', 'items[2].unit']));
+    expect((await put('pas-un-uuid', { name: 'x', items: [] })).status).toBe(400);
+    expect((await call(getTemplates, { userId: null })).status).toBe(401);
+  });
+
+  it('limite le nombre de modèles et est supprimé avec le compte', async () => {
+    for (let i = 0; i < 50; i++) await put(randomUUID(), { name: `M${i}`, items: [] });
+    expect((await put(randomUUID(), { name: 'de trop', items: [] })).status).toBe(409);
+    await call(deleteAccount, { userId: 'user-1' });
+    expect((await call(getTemplates)).body).toEqual([]);
   });
 });
