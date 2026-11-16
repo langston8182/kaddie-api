@@ -19,7 +19,8 @@ export interface AddItemInput {
 
 export type AddItemStatus = 'ADDED' | 'MERGED' | 'UNCHANGED';
 
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 12;
+const retryPause = () => new Promise((resolve) => setTimeout(resolve, Math.random() * 25));
 
 export async function touchList(userId: string, listId: string): Promise<void> {
   await ShoppingListModel.updateOne({ userId, id: listId }, { $set: { updatedAt: new Date() } });
@@ -68,7 +69,10 @@ export async function addItem(userId: string, listId: string, input: AddItemInpu
         await afterAdd(userId, listId, input.productId);
         return { status: 'ADDED' as AddItemStatus, item: itemToDto(created.toObject()) };
       } catch (err: any) {
-        if (err?.code === 11000) continue; // ajout concurrent du même produit : on retente en fusion
+        if (err?.code === 11000) {
+          await retryPause(); // ajout concurrent du même produit : on retente en fusion
+          continue;
+        }
         throw err;
       }
     }
@@ -89,7 +93,10 @@ export async function addItem(userId: string, listId: string, input: AddItemInpu
       { $set: { ...next, note: existing.note || input.note }, $inc: { version: 1 } },
       { new: true },
     ).lean();
-    if (!updated) continue; // modifié entre-temps : relire et recalculer
+    if (!updated) {
+      await retryPause(); // modifié entre-temps : relire et recalculer
+      continue;
+    }
     await afterAdd(userId, listId, input.productId);
     return { status: 'MERGED' as AddItemStatus, item: itemToDto(updated) };
   }
