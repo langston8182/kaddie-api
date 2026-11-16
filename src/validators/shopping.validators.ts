@@ -29,8 +29,9 @@ export function validateItemEdit(body: Body) {
   const quantity = c.number(body, 'quantity', { exclusiveMin: 0, max: 100000 });
   const unit = c.oneOf(body, 'unit', UNITS);
   const note = c.string(body, 'note', { max: 120 });
+  const isPinned = c.boolean(body, 'isPinned');
   c.assert();
-  return { quantity, unit, note };
+  return { quantity, unit, note, isPinned };
 }
 
 export function validatePurchased(body: Body) {

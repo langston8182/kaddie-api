@@ -28,6 +28,7 @@ export function itemToDto(item: IShoppingItem) {
     unit: item.unit,
     purchasedQuantity: item.purchasedQuantity,
     isPurchased: item.isPurchased,
+    isPinned: item.isPinned ?? false,
     note: item.note,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,

@@ -230,6 +230,23 @@ describe('produits d une liste', () => {
     expect((await call(removeItem, { pathParameters: { id, itemId } })).status).toBe(404);
   });
 
+  it('épingle et désépingle un produit sans toucher aux quantités', async () => {
+    const id = await newList();
+    const { body } = await add(id, { productId: 'lait', name: 'Lait', quantity: 2, unit: 'L' });
+    expect(body.item.isPinned).toBe(false);
+    const itemId = body.item.id;
+
+    const pinned = await call(updateItem, { pathParameters: { id, itemId }, body: { isPinned: true } });
+    expect(pinned.body).toMatchObject({ isPinned: true, quantity: 2, unit: 'L' });
+    const merged = await add(id, { productId: 'lait', name: 'Lait', quantity: 1, unit: 'L' });
+    expect(merged.body.item).toMatchObject({ isPinned: true, quantity: 3 });
+    expect((await call(getItems, { pathParameters: { id } })).body[0].isPinned).toBe(true);
+
+    const unpinned = await call(updateItem, { pathParameters: { id, itemId }, body: { isPinned: false, note: 'x' } });
+    expect(unpinned.body).toMatchObject({ isPinned: false, note: 'x' });
+    expect((await call(updateItem, { pathParameters: { id, itemId }, body: { isPinned: 'oui' } })).status).toBe(400);
+  });
+
   it('supprime les produits avec la liste', async () => {
     const id = await newList();
     await add(id, { productId: 'p', name: 'Lait' });

@@ -13,6 +13,8 @@ export interface IShoppingItem {
   /** Part de la quantité déjà achetée. */
   purchasedQuantity: number;
   isPurchased: boolean;
+  /** Épinglé en haut de la liste. */
+  isPinned: boolean;
   note: string;
   /** Compteur de concurrence optimiste pour les fusions simultanées. */
   version: number;
@@ -31,6 +33,7 @@ const ShoppingItemSchema = new Schema<IShoppingItem>(
     unit: { type: String, enum: UNITS, default: 'PIECE' },
     purchasedQuantity: { type: Number, min: 0, default: 0 },
     isPurchased: { type: Boolean, default: false },
+    isPinned: { type: Boolean, default: false },
     note: { type: String, trim: true, maxlength: 120, default: '' },
     version: { type: Number, default: 0 },
   },

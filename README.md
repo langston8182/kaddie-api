@@ -50,7 +50,7 @@ Pages publiques HTML à la racine (hors `/v1`, sans authentification), pour l'é
 | GET | `/lists/{id}/items?updatedSince=` | Produits de la liste |
 | POST | `/lists/{id}/items` | Ajoute **ou fusionne** un produit (voir ci-dessous) |
 | DELETE | `/lists/{id}/items[?purchased=true]` | Vide la liste, ou seulement les achetés |
-| PUT | `/lists/{id}/items/{itemId}` | Modifie `quantity`, `unit`, `note` |
+| PUT | `/lists/{id}/items/{itemId}` | Modifie `quantity`, `unit`, `note`, `isPinned` (épinglé en haut de la liste) |
 | PUT | `/lists/{id}/items/{itemId}/purchased` | Coche / décoche `{ purchased }` |
 | DELETE | `/lists/{id}/items/{itemId}` | Supprime un produit |
 | GET | `/products?updatedSince=` | Produits personnels de l'utilisateur |
