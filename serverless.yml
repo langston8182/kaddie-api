@@ -1,0 +1,146 @@
+service: kaddie-api
+
+frameworkVersion: '3'
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'eu-west-3'}
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 15
+  environment:
+    MONGODB_URI: ${env:MONGODB_URI, self:custom.secrets.${self:custom.secretKey.${self:provider.stage}, 'preprod'}.MONGO_URI}
+    MONGODB_DB_NAME: ${env:MONGODB_DB_NAME, 'kaddie'}
+    # L'en-tête x-user-id (identité factice) n'est accepté qu'en dev, tant que l'authentification n'est pas branchée.
+    ALLOW_DEV_USER_HEADER: ${self:custom.devUserHeader.${self:provider.stage}, 'false'}
+  httpApi:
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+        - http://localhost:5173
+      allowedHeaders:
+        - content-type
+        - x-amz-date
+        - authorization
+        - x-api-key
+        - x-amz-security-token
+        - x-amz-user-agent
+        - x-amzn-trace-id
+        - x-user-id
+      allowedMethods:
+        - OPTIONS
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowCredentials: true
+      maxAge: 0
+
+plugins:
+  - serverless-esbuild
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  secrets: ${ssm(eu-west-3):/aws/reference/secretsmanager/kaddie/secrets}
+  secretKey:
+    dev: preprod
+    preprod: preprod
+    prod: prod
+  devUserHeader:
+    dev: 'true'
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: false
+    target: node20
+    platform: node
+    concurrency: 1
+    exclude:
+      - '@aws-sdk/*'
+
+functions:
+  # --- Santé ---
+  health:
+    handler: src/handlers/health/get.handler
+    events:
+      - httpApi: { path: /v1/health, method: get }
+
+  # --- Listes ---
+  getLists:
+    handler: src/handlers/lists/getAll.handler
+    events:
+      - httpApi: { path: /v1/lists, method: get }
+  createList:
+    handler: src/handlers/lists/create.handler
+    events:
+      - httpApi: { path: /v1/lists, method: post }
+  getList:
+    handler: src/handlers/lists/getById.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}', method: get }
+  updateList:
+    handler: src/handlers/lists/update.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}', method: put }
+  deleteList:
+    handler: src/handlers/lists/remove.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}', method: delete }
+  duplicateList:
+    handler: src/handlers/lists/duplicate.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/duplicate', method: post }
+  uncheckAllItems:
+    handler: src/handlers/lists/uncheckAll.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/uncheck', method: post }
+
+  # --- Produits d'une liste ---
+  getItems:
+    handler: src/handlers/items/getAll.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/items', method: get }
+  addItem:
+    handler: src/handlers/items/add.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/items', method: post }
+  clearItems:
+    handler: src/handlers/lists/clearItems.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/items', method: delete }
+  updateItem:
+    handler: src/handlers/items/update.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/items/{itemId}', method: put }
+  deleteItem:
+    handler: src/handlers/items/remove.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/items/{itemId}', method: delete }
+  setItemPurchased:
+    handler: src/handlers/items/setPurchased.handler
+    events:
+      - httpApi: { path: '/v1/lists/{id}/items/{itemId}/purchased', method: put }
+
+  # --- Produits personnels (dictionnaire utilisateur) ---
+  getProducts:
+    handler: src/handlers/products/getAll.handler
+    events:
+      - httpApi: { path: /v1/products, method: get }
+  upsertProduct:
+    handler: src/handlers/products/upsert.handler
+    events:
+      - httpApi: { path: '/v1/products/{id}', method: put }
+  deleteProduct:
+    handler: src/handlers/products/remove.handler
+    events:
+      - httpApi: { path: '/v1/products/{id}', method: delete }
+
+  # --- Compte ---
+  deleteAccount:
+    handler: src/handlers/account/remove.handler
+    events:
+      - httpApi: { path: /v1/account, method: delete }
