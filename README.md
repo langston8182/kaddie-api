@@ -35,6 +35,8 @@ tests/unit, tests/integration
 
 ## Routes (préfixe `/v1`)
 
+Pages publiques HTML à la racine (hors `/v1`, sans authentification), pour l'écran de consentement Google : `/` (accueil), `/confidentialite`, `/conditions`, `/suppression-compte` (`src/handlers/site/pages.ts`).
+
 | Méthode | Route | Description |
 |---|---|---|
 | GET | `/health` | Santé (public) |
