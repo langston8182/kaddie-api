@@ -143,9 +143,20 @@ export function createHandler(deps: AlexaDeps = defaultDeps) {
       const rawBody = event.isBase64Encoded && event.body ? Buffer.from(event.body, 'base64').toString('utf8') : event.body ?? '';
       const allowed = deps.skillIds();
       if (allowed.length === 0) throw new HttpError(500, 'Skill non configurée');
-      await deps.verifyRequest(event, rawBody);
-      validateSkillId(body, allowed);
-      validateTimestamp(body?.request?.timestamp, deps.now());
+      try {
+        await deps.verifyRequest(event, rawBody);
+        validateSkillId(body, allowed);
+        validateTimestamp(body?.request?.timestamp, deps.now());
+      } catch (err) {
+        // Ne journalise jamais le corps (il contient le jeton de l'utilisateur), seulement la raison du refus.
+        console.warn('Requête Alexa refusée', {
+          reason: err instanceof Error ? err.message : String(err),
+          type: body?.request?.type,
+          certUrl: event.headers?.signaturecertchainurl,
+          hasSignature: !!event.headers?.['signature-256'],
+        });
+        throw err;
+      }
       return success(200, await respond(body, deps));
     },
     { auth: false },

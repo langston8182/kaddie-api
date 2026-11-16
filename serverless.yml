@@ -28,7 +28,7 @@ provider:
     COGNITO_USER_POOL_ID: ${self:custom.cognito.${self:provider.stage}.userPoolId, ''}
     COGNITO_CLIENT_ID: ${self:custom.cognito.${self:provider.stage}.clientId, ''}
     ALLOW_DEV_USER_HEADER: ${self:custom.devUserHeader.${self:provider.stage}, 'false'}
-    # Skill Alexa « mon kaddie » : identifiant de skill accepté, client Cognito de liaison de compte, modèle Bedrock.
+    # Skill Alexa « ma liste perso » : identifiant de skill accepté, client Cognito de liaison de compte, modèle Bedrock.
     ALEXA_SKILL_IDS: ${self:custom.alexa.skillId}
     COGNITO_ALEXA_CLIENT_ID: ${self:custom.alexa.clientId.${self:provider.stage}, ''}
     BEDROCK_MODEL_ID: ${self:custom.alexa.bedrockModelId}
@@ -172,7 +172,7 @@ functions:
     events:
       - httpApi: { path: '/v1/products/{id}', method: delete }
 
-  # --- Alexa (skill « mon kaddie ») ---
+  # --- Alexa (skill « ma liste perso ») ---
   alexa:
     handler: src/handlers/alexa/handle.handler
     timeout: 10
