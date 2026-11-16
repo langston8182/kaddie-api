@@ -1,4 +1,5 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { connectToDatabase } from '../config/db';
 import { error, success } from './response';
 import { HttpError, isValidUuid } from './validation';
@@ -14,13 +15,32 @@ export interface ApiContext {
 
 type ApiFn = (ctx: ApiContext) => Promise<APIGatewayProxyStructuredResultV2>;
 
+let verifier: ReturnType<typeof CognitoJwtVerifier.create> | undefined;
+
+function getVerifier() {
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+  if (!userPoolId || !clientId) return undefined;
+  // tokenUse null : accepte l'access token comme l'id token.
+  verifier ??= CognitoJwtVerifier.create({ userPoolId, clientId, tokenUse: null });
+  return verifier;
+}
+
 /**
- * Identité de l'appelant.
- * L'authentification (Cognito) n'est pas encore branchée : seul l'en-tête `x-user-id` est accepté,
- * et uniquement si ALLOW_DEV_USER_HEADER=true. C'est le point d'extension à remplacer plus tard
- * (claim `sub` d'un JWT validé).
+ * Identité de l'appelant : `sub` du JWT Cognito (Authorization: Bearer) quand le pool est configuré.
+ * L'en-tête `x-user-id` n'est accepté que si ALLOW_DEV_USER_HEADER=true (stage dev).
  */
 export async function resolveUserId(event: APIGatewayProxyEventV2): Promise<string> {
+  const jwtVerifier = getVerifier();
+  const authorization = event.headers?.authorization;
+  if (jwtVerifier && authorization?.toLowerCase().startsWith('bearer ')) {
+    try {
+      const payload = await jwtVerifier.verify(authorization.slice(7).trim());
+      return payload.sub;
+    } catch {
+      throw new HttpError(401, 'Jeton invalide ou expiré');
+    }
+  }
   if (process.env.ALLOW_DEV_USER_HEADER === 'true') {
     const header = event.headers?.['x-user-id'];
     if (header && header.length <= 128) return header;

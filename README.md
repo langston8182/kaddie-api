@@ -3,7 +3,7 @@
 API REST serverless (AWS Lambda + API Gateway HTTP API + MongoDB Atlas) pour l'application Android Kaddie. Même architecture que `gympulse-api` : TypeScript, Serverless Framework 3, esbuild, Mongoose, Jest + MongoDB en mémoire.
 
 > **Rôle** : l'application reste *local-first* (la base Room locale est la source de vérité, tout fonctionne hors connexion). Cette API prépare la sauvegarde cloud et la synchronisation : identifiants UUID générés par le client, écritures rejouables, lectures incrémentales (`updatedSince`).
-> **Authentification** : non branchée pour l'instant. Seul l'en-tête `x-user-id` est accepté, uniquement en `dev` (`ALLOW_DEV_USER_HEADER=true`). Le point d'extension est `resolveUserId` dans `src/utils/handler.ts` (à remplacer par la validation d'un JWT Cognito).
+> **Authentification** : en `prod`, JWT Cognito (`Authorization: Bearer`, access ou id token), validé dans `resolveUserId` (`src/utils/handler.ts`) ; l'identifiant utilisateur est le `sub`. Le pool est configuré par stage dans `custom.cognito` de `serverless.yml`. Sans pool (dev/preprod), seul l'en-tête `x-user-id` est accepté (`ALLOW_DEV_USER_HEADER=true`).
 
 ## Démarrage
 
@@ -79,6 +79,6 @@ L'index unique `(userId, listId, productId)` empêche tout doublon, et un compte
 
 ## Suites prévues
 
-- Authentification Cognito (JWT) à la place de `x-user-id`.
+- Pool Cognito pour dev/preprod (aujourd'hui `x-user-id`).
 - Suppressions « tombstones » pour une vraie synchronisation différentielle.
 - Implémentation Android de `ShoppingRemoteDataSource` appelant cette API.
