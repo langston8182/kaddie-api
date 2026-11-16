@@ -1,0 +1,38 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "mon kaddie",
+      "intents": [
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] },
+        {
+          "name": "AddIntent",
+          "slots": [{ "name": "produits", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "ajoute {produits}",
+            "ajouter {produits}",
+            "rajoute {produits}",
+            "rajouter {produits}",
+            "mets {produits}",
+            "mets moi {produits}",
+            "met {produits}",
+            "ajoute moi {produits}",
+            "ajoute à la liste {produits}",
+            "ajoute à ma liste {produits}",
+            "note {produits}",
+            "il me faut {produits}",
+            "j'ai besoin de {produits}",
+            "je veux {produits}",
+            "je voudrais {produits}",
+            "on n'a plus de {produits}",
+            "achète {produits}"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}

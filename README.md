@@ -78,6 +78,27 @@ Unités : `PIECE, PACK, BOTTLE, KG, G, L, ML`. Catégories : `fruits_legumes, vi
 
 L'index unique `(userId, listId, productId)` empêche tout doublon, et un compteur `version` (concurrence optimiste) permet de relire et recalculer la fusion si deux requêtes se croisent.
 
+## Alexa (skill « mon kaddie »)
+
+« Alexa, demande à mon kaddie d'ajouter trois steaks et 300 grammes de tomates. » Les produits sont ajoutés à la **liste modifiée le plus récemment** (créée sous le nom « Courses » s'il n'y en a aucune) et apparaissent dans l'app à sa prochaine synchronisation.
+
+```
+Echo → Alexa → POST /alexa (cette API) → Bedrock (Nova Lite) → ajout dans MongoDB → réponse vocale
+```
+
+- **Point d'entrée** : `POST /alexa` (`src/handlers/alexa/handle.ts`), hors `/v1`. Il vérifie, dans l'ordre : le certificat et la signature d'Amazon (`src/services/alexaVerify.ts`), l'identifiant de la skill (`ALEXA_SKILL_IDS`), la date (150 s), puis le jeton de liaison de compte (jeton d'accès Cognito, même vérificateur que l'app ; client Alexa = `COGNITO_ALEXA_CLIENT_ID`). L'identifiant utilisateur est le `sub` du jeton. Sans jeton valide, Alexa propose de lier le compte.
+- **Compréhension** : `src/services/bedrock.ts` envoie la phrase à Bedrock (API Converse, `BEDROCK_MODEL_ID` = profil d'inférence `eu.amazon.nova-lite-v1:0`, région `BEDROCK_REGION` = `eu-west-3`) avec la liste des produits connus, et reçoit un JSON `{items:[{name,quantity,unit}]}`. Une unité ou une quantité n'est retenue que si elle figure dans la phrase (le modèle invente parfois « paquet » ou « litre »). Si Bedrock est indisponible, repli sur une analyse à règles (`src/domain/spokenParser.ts`).
+- **Produits** : `src/data/dictionary.json` est une **copie** du dictionnaire de l'app (`app/src/main/assets/dictionary.json`), à garder synchronisée. Les produits du dictionnaire ont les mêmes identifiants `builtin:<clé>` que dans l'app, donc Alexa et l'app fusionnent les mêmes produits. Un produit inconnu devient un produit personnel ; les « noms » qui sont des phrases (plus de 5 mots) sont refusés.
+- **Fusion** : comme dans l'app (quantités additionnées, unités compatibles converties). Si les unités sont incompatibles, Alexa n'arbitre pas : la quantité existante est conservée et elle le dit.
+- **Modèle d'interaction** : `alexa/interaction-model.fr-FR.json` (nom d'invocation « mon kaddie », intention `AddIntent` avec un emplacement `produits` de type `AMAZON.SearchQuery`), à importer dans la console Alexa (Build → Interaction Model → JSON Editor).
+
+### Mise en place
+
+1. **Bedrock** : accès au modèle Nova Lite dans `eu-west-3` (profil d'inférence `eu.amazon.nova-lite-v1:0`). Les droits `bedrock:InvokeModel` sont dans `serverless.yml`.
+2. **Cognito** : un client **confidentiel** (avec secret) par pool, Google activé, flux *Authorization code*, scopes `openid email profile` ; ses URL de rappel sont celles que la console Alexa affiche (Account Linking). L'identifiant du client est dans `custom.alexa.clientId` de `serverless.yml` (stage `dev` renseigné ; **prod à renseigner**).
+3. **Skill** : type Personnalisée, français (France), invocation « mon kaddie », endpoint HTTPS `https://kaddie-api-preprod.cyrilmarchive.com/alexa` (certificat d'une autorité reconnue), Account Linking *Auth Code Grant* (URI `…/oauth2/authorize` et `…/oauth2/token` du domaine Cognito, authentification **HTTP Basic**).
+4. **Déployer** l'API, puis tester dans l'onglet *Test* de la console (mode Développement) ou sur l'Echo.
+
 ## Erreurs
 
 `{ "message": "...", "details": ... }` avec 400 (validation, `details` par champ), 401, 404, 409, 500.
@@ -85,5 +106,4 @@ L'index unique `(userId, listId, productId)` empêche tout doublon, et un compte
 ## Suites prévues
 
 - Pool Cognito pour dev/preprod (aujourd'hui `x-user-id`).
-- Suppressions « tombstones » pour une vraie synchronisation différentielle.
 - Implémentation Android de `ShoppingRemoteDataSource` appelant cette API.

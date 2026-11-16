@@ -16,7 +16,7 @@ describe('pages publiques', () => {
 
   it('la politique cite les données réellement traitées et la suppression', async () => {
     const res: any = await privacy();
-    for (const word of ['Google', 'Amazon Cognito', 'MongoDB Atlas', '/suppression-compte']) {
+    for (const word of ['Google', 'Amazon Cognito', 'MongoDB Atlas', 'Amazon Bedrock', 'Alexa', '/suppression-compte']) {
       expect(res.body).toContain(word);
     }
   });

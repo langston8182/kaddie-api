@@ -11,6 +11,16 @@ provider:
   stage: ${opt:stage, 'dev'}
   memorySize: 256
   timeout: 15
+  iam:
+    role:
+      statements:
+        # Compréhension des phrases dictées à Alexa (API Converse de Bedrock, profil d'inférence éventuel inclus).
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource:
+            - arn:aws:bedrock:*::foundation-model/${self:custom.alexa.bedrockFoundationModel}
+            - arn:aws:bedrock:*:${aws:accountId}:inference-profile/*
   environment:
     MONGODB_URI: ${env:MONGODB_URI, self:custom.secrets.${self:custom.secretKey.${self:provider.stage}, 'preprod'}.MONGO_URI}
     MONGODB_DB_NAME: ${env:MONGODB_DB_NAME, 'kaddie'}
@@ -18,6 +28,11 @@ provider:
     COGNITO_USER_POOL_ID: ${self:custom.cognito.${self:provider.stage}.userPoolId, ''}
     COGNITO_CLIENT_ID: ${self:custom.cognito.${self:provider.stage}.clientId, ''}
     ALLOW_DEV_USER_HEADER: ${self:custom.devUserHeader.${self:provider.stage}, 'false'}
+    # Skill Alexa « mon kaddie » : identifiant de skill accepté, client Cognito de liaison de compte, modèle Bedrock.
+    ALEXA_SKILL_IDS: ${self:custom.alexa.skillId}
+    COGNITO_ALEXA_CLIENT_ID: ${self:custom.alexa.clientId.${self:provider.stage}, ''}
+    BEDROCK_MODEL_ID: ${self:custom.alexa.bedrockModelId}
+    BEDROCK_REGION: ${self:custom.alexa.bedrockRegion}
   httpApi:
     cors:
       allowedOrigins:
@@ -59,6 +74,15 @@ custom:
     prod:
       userPoolId: eu-west-3_qpZYXbiLE
       clientId: 1idl8aqbcettt4cr716n26i9sk
+  alexa:
+    skillId: amzn1.ask.skill.b2d3be3e-bdad-4c84-a48c-29cd98562b99
+    # Client Cognito (avec secret) de la liaison de compte ; à renseigner pour le pool de prod.
+    clientId:
+      dev: 7g68uasgan1j93kl2nf1uqvuk
+    # Nova ne s'appelle que par un profil d'inférence (préfixe eu.), qui répartit entre régions européennes.
+    bedrockModelId: eu.amazon.nova-lite-v1:0
+    bedrockFoundationModel: amazon.nova-lite-v1:0
+    bedrockRegion: eu-west-3
   devUserHeader:
     dev: 'true'
   esbuild:
@@ -147,6 +171,14 @@ functions:
     handler: src/handlers/products/remove.handler
     events:
       - httpApi: { path: '/v1/products/{id}', method: delete }
+
+  # --- Alexa (skill « mon kaddie ») ---
+  alexa:
+    handler: src/handlers/alexa/handle.handler
+    timeout: 10
+    memorySize: 512
+    events:
+      - httpApi: { path: /alexa, method: post }
 
   # --- Pages publiques (Google : écran de consentement / branding) ---
   siteHome:

@@ -19,11 +19,23 @@ let verifier: ReturnType<typeof CognitoJwtVerifier.create> | undefined;
 
 function getVerifier() {
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  const clientId = process.env.COGNITO_CLIENT_ID;
-  if (!userPoolId || !clientId) return undefined;
+  // Clients acceptés : l'application Android et, si configuré, le client de liaison de compte d'Alexa.
+  const clientIds = [process.env.COGNITO_CLIENT_ID, process.env.COGNITO_ALEXA_CLIENT_ID].filter((c): c is string => !!c);
+  if (!userPoolId || clientIds.length === 0) return undefined;
   // tokenUse null : accepte l'access token comme l'id token.
-  verifier ??= CognitoJwtVerifier.create({ userPoolId, clientId, tokenUse: null });
+  verifier ??= CognitoJwtVerifier.create({ userPoolId, clientId: clientIds, tokenUse: null });
   return verifier;
+}
+
+/** `sub` d'un jeton Cognito valide (signature, expiration, client autorisé) ; lève une 401 sinon. */
+export async function verifyAccessToken(token: string): Promise<string> {
+  const jwtVerifier = getVerifier();
+  if (!jwtVerifier) throw new HttpError(401, 'Authentification requise');
+  try {
+    return (await jwtVerifier.verify(token)).sub;
+  } catch {
+    throw new HttpError(401, 'Jeton invalide ou expiré');
+  }
 }
 
 /**
@@ -31,15 +43,9 @@ function getVerifier() {
  * L'en-tête `x-user-id` n'est accepté que si ALLOW_DEV_USER_HEADER=true (stage dev).
  */
 export async function resolveUserId(event: APIGatewayProxyEventV2): Promise<string> {
-  const jwtVerifier = getVerifier();
   const authorization = event.headers?.authorization;
-  if (jwtVerifier && authorization?.toLowerCase().startsWith('bearer ')) {
-    try {
-      const payload = await jwtVerifier.verify(authorization.slice(7).trim());
-      return payload.sub;
-    } catch {
-      throw new HttpError(401, 'Jeton invalide ou expiré');
-    }
+  if (getVerifier() && authorization?.toLowerCase().startsWith('bearer ')) {
+    return verifyAccessToken(authorization.slice(7).trim());
   }
   if (process.env.ALLOW_DEV_USER_HEADER === 'true') {
     const header = event.headers?.['x-user-id'];
